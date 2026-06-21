@@ -1,0 +1,1648 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SRS LLM - Notebook Specification Space</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        archive: {
+                            50: '#FAF9F6',   // Soft alabaster / cream
+                            100: '#F4F1EA',  // Warm light grey / paper
+                            200: '#E8E2D5',  // Subtle parchment line
+                            300: '#D0C6B1',  // Muted beige
+                            700: '#4E483B',  // Dark slate brown
+                            800: '#3D382E',  // Darker body text
+                            900: '#1E1B15',  // Deep pitch brown/black
+                        }
+                    },
+                    fontFamily: {
+                        serif: ['Georgia', 'ui-serif', 'serif'],
+                        sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'ui-monospace', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Google Fonts & Font Awesome Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Markdown Parser (Marked) -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+    <!-- Diagramming (Mermaid) -->
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+
+    <!-- PDF Extraction Library (PDF.js) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+    <script>
+        // Set worker path for PDF.js
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+    </script>
+
+    <style>
+        /* Archive aesthetic adjustments */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #FAF9F6;
+            color: #1E1B15;
+        }
+        
+        /* Custom subtle scrollbars */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #FAF9F6;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #E8E2D5;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #D0C6B1;
+        }
+
+        /* Markdown rendered content styling */
+        .markdown-body h1 { font-size: 1.5rem; font-weight: 700; margin-top: 1rem; margin-bottom: 0.5rem; border-bottom: 1px solid #E8E2D5; padding-bottom: 0.25rem; }
+        .markdown-body h2 { font-size: 1.25rem; font-weight: 600; margin-top: 0.8rem; margin-bottom: 0.4rem; }
+        .markdown-body h3 { font-size: 1.1rem; font-weight: 600; margin-top: 0.6rem; margin-bottom: 0.3rem; }
+        .markdown-body p { margin-bottom: 0.8rem; line-height: 1.6; }
+        .markdown-body ul, .markdown-body ol { margin-left: 1.5rem; margin-bottom: 0.8rem; list-style-type: decimal; }
+        .markdown-body ul { list-style-type: disc; }
+        .markdown-body code { font-family: 'JetBrains Mono', monospace; background-color: #F4F1EA; padding: 0.125rem 0.25rem; border-radius: 0.25rem; font-size: 0.875rem; }
+        .markdown-body pre { background-color: #1E1B15; color: #FAF9F6; padding: 1rem; border-radius: 0.375rem; overflow-x: auto; margin-bottom: 0.8rem; }
+        .markdown-body pre code { background-color: transparent; color: inherit; padding: 0; }
+        .markdown-body blockquote { border-left: 4px solid #D0C6B1; padding-left: 1rem; color: #4E483B; font-style: italic; margin-bottom: 0.8rem; }
+        .markdown-body table { width: 100%; border-collapse: collapse; margin-bottom: 1rem; }
+        .markdown-body th, .markdown-body td { border: 1px solid #E8E2D5; padding: 0.5rem; text-align: left; }
+        .markdown-body th { background-color: #F4F1EA; }
+    </style>
+</head>
+<body class="h-screen flex flex-col overflow-hidden text-archive-900 bg-archive-50">
+
+    <!-- TOP HEADER BAR -->
+    <header class="h-14 border-b border-archive-200 bg-white flex items-center justify-between px-6 z-10 shrink-0">
+        <div class="flex items-center space-x-3">
+            <div class="flex items-center justify-center w-8 h-8 rounded bg-archive-900 text-archive-50 font-serif font-bold text-lg">S</div>
+            <div>
+                <h1 class="font-serif font-bold text-md tracking-tight">SRS LLM</h1>
+                <p class="text-[10px] text-archive-700 font-mono tracking-widest uppercase">The Archive Specification Notebook</p>
+            </div>
+        </div>
+
+        <!-- Document Quick Status -->
+        <div class="hidden md:flex items-center space-x-2 text-xs text-archive-700 bg-archive-100 py-1 px-3 rounded-full border border-archive-200">
+            <i class="fa-solid fa-file-invoice text-archive-900"></i>
+            <span id="active-doc-badge" class="font-semibold truncate max-w-[200px]">No document selected</span>
+        </div>
+
+        <!-- API KEY INPUT & VERIFICATION -->
+        <div class="flex items-center space-x-3">
+            <div class="relative flex items-center">
+                <input 
+                    type="password" 
+                    id="api-key-input" 
+                    placeholder="Enter Gemini API Key (starts with AIzaSy or AQ.)..." 
+                    class="w-64 text-xs bg-archive-50 border border-archive-200 rounded px-3 py-1.5 pr-8 focus:outline-none focus:border-archive-700 font-mono"
+                />
+                <button 
+                    onclick="toggleApiKeyVisibility()" 
+                    class="absolute right-2.5 text-archive-300 hover:text-archive-700 text-xs transition-colors"
+                    title="Toggle Visibility"
+                >
+                    <i id="eye-icon" class="fa-solid fa-eye"></i>
+                </button>
+            </div>
+            
+            <button 
+                onclick="connectApiKey()" 
+                id="connect-btn" 
+                class="bg-archive-900 hover:bg-archive-800 text-archive-50 text-xs font-semibold py-1.5 px-3 rounded flex items-center space-x-2 transition-all shadow-sm"
+            >
+                <span id="connect-indicator" class="w-2.5 h-2.5 rounded-full bg-amber-400 transition-colors duration-300"></span>
+                <span id="connect-text">Connect</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- WORKSPACE CONTAINER -->
+    <main class="flex-1 flex overflow-hidden w-full">
+
+        <!-- LEFT SIDEBAR: SRS Source & Uploads (20%) -->
+        <aside class="w-1/5 border-r border-archive-200 bg-archive-100 flex flex-col justify-between shrink-0">
+            
+            <!-- Document List and Header -->
+            <div class="p-4 flex-1 flex flex-col overflow-hidden">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-xs font-mono tracking-wider uppercase font-bold text-archive-700">SRS Sources</h2>
+                    <span id="source-count" class="text-[10px] font-mono bg-archive-200 text-archive-800 px-2 py-0.5 rounded-full font-bold">0</span>
+                </div>
+
+                <!-- Source File Cards Container -->
+                <div id="sources-container" class="space-y-2.5 flex-1 overflow-y-auto pr-1">
+                    <!-- Dynamic Document Cards go here -->
+                </div>
+            </div>
+
+            <!-- Upload Zone & File Drop -->
+            <div class="p-4 border-t border-archive-200 bg-white space-y-3">
+                <div 
+                    id="drop-zone"
+                    class="border-2 border-dashed border-archive-200 hover:border-archive-700 rounded-lg p-4 text-center cursor-pointer transition-colors"
+                >
+                    <input type="file" id="file-uploader" class="hidden" accept=".txt,.md,.json,.pdf" />
+                    <i class="fa-solid fa-cloud-arrow-up text-archive-300 text-xl mb-1.5"></i>
+                    <p class="text-xs font-medium">Click or Drag to Upload</p>
+                    <p class="text-[10px] text-archive-700 mt-1">Accepts PDF, TXT, MD, JSON</p>
+                </div>
+                
+                <button 
+                    onclick="loadSampleSRS()" 
+                    class="w-full border border-archive-300 hover:border-archive-900 text-archive-800 hover:text-archive-900 text-xs py-2 rounded font-medium transition-colors flex items-center justify-center space-x-2"
+                >
+                    <i class="fa-solid fa-folder-open"></i>
+                    <span>Load Archetypal Templates</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- CENTER AREA: Document Viewer & System Modeler (50%) -->
+        <section class="w-2/4 bg-white flex flex-col border-r border-archive-200 overflow-hidden shrink-0">
+            
+            <!-- Tab Controls -->
+            <div class="h-11 border-b border-archive-200 bg-archive-100 flex items-center justify-between px-4 shrink-0">
+                <div class="flex space-x-1 h-full items-end">
+                    <button 
+                        onclick="switchCenterTab('read')" 
+                        id="tab-read" 
+                        class="px-4 py-2 text-xs font-medium border-t-2 border-x border-archive-200 bg-white rounded-t-md -mb-[1px] text-archive-900 flex items-center space-x-1.5 transition-all"
+                    >
+                        <i class="fa-solid fa-book-open"></i>
+                        <span>Read Document</span>
+                    </button>
+                    <button 
+                        onclick="switchCenterTab('analysis')" 
+                        id="tab-analysis" 
+                        class="px-4 py-2 text-xs font-medium border-t-2 border-transparent hover:text-archive-900 text-archive-700 rounded-t-md -mb-[1px] flex items-center space-x-1.5 transition-all"
+                    >
+                        <i class="fa-solid fa-wand-magic-sparkles"></i>
+                        <span>Requirements Review</span>
+                    </button>
+                    <button 
+                        onclick="switchCenterTab('mermaid')" 
+                        id="tab-mermaid" 
+                        class="px-4 py-2 text-xs font-medium border-t-2 border-transparent hover:text-archive-900 text-archive-700 rounded-t-md -mb-[1px] flex items-center space-x-1.5 transition-all"
+                    >
+                        <i class="fa-solid fa-diagram-project"></i>
+                        <span>Architecture Generator</span>
+                    </button>
+                    <button 
+                        onclick="switchCenterTab('slides')" 
+                        id="tab-slides" 
+                        class="px-4 py-2 text-xs font-medium border-t-2 border-transparent hover:text-archive-900 text-archive-700 rounded-t-md -mb-[1px] flex items-center space-x-1.5 transition-all"
+                    >
+                        <i class="fa-solid fa-display"></i>
+                        <span>Generate Slides</span>
+                    </button>
+                </div>
+
+                <!-- Reader Actions -->
+                <div class="flex items-center space-x-2">
+                    <button 
+                        onclick="triggerQuickSummary()" 
+                        class="text-[11px] text-archive-800 hover:text-archive-900 border border-archive-300 hover:border-archive-700 rounded px-2.5 py-1 flex items-center space-x-1 transition-all"
+                        title="Draft interactive executive outline"
+                    >
+                        <i class="fa-solid fa-compress"></i>
+                        <span>Auto-Summarize</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Tab Contents Container -->
+            <div class="flex-1 overflow-hidden relative">
+                
+                <!-- READ TAB -->
+                <div id="pane-read" class="h-full overflow-y-auto p-8 max-w-none prose prose-slate">
+                    <div id="document-viewer-empty" class="h-full flex flex-col items-center justify-center text-center p-8">
+                        <div class="w-16 h-16 rounded-full bg-archive-100 flex items-center justify-center text-archive-300 mb-4">
+                            <i class="fa-solid fa-folder-open text-2xl"></i>
+                        </div>
+                        <h3 class="text-md font-serif font-bold text-archive-800">No Document Active</h3>
+                        <p class="text-xs text-archive-700 max-w-sm mt-1">
+                            Load one of our high-fidelity system specification templates below, or drop in a custom PDF/text requirement set to begin analysis.
+                        </p>
+                        <button 
+                            onclick="loadSampleSRS()" 
+                            class="mt-4 bg-archive-900 text-archive-50 px-4 py-2 text-xs rounded hover:bg-archive-800 font-medium transition-colors"
+                        >
+                            Spin Up Sample Specs
+                        </button>
+                    </div>
+
+                    <div id="document-viewer-content" class="hidden">
+                        <div class="flex items-center justify-between border-b border-archive-200 pb-4 mb-6">
+                            <div>
+                                <h1 id="view-doc-title" class="font-serif font-bold text-2xl text-archive-900">Document Title</h1>
+                                <p id="view-doc-meta" class="text-xs text-archive-700 font-mono mt-1">Source Information</p>
+                            </div>
+                            <div class="flex space-x-2">
+                                <button onclick="editActiveDocument()" class="text-xs border border-archive-200 text-archive-700 hover:text-archive-900 hover:bg-archive-100 rounded px-2.5 py-1.5 flex items-center space-x-1 transition-colors">
+                                    <i class="fa-solid fa-pen-to-square"></i>
+                                    <span>Edit Content</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Editable Content Textarea Area -->
+                        <div id="doc-edit-container" class="hidden mb-6">
+                            <textarea id="doc-edit-textarea" class="w-full h-96 p-4 border border-archive-300 font-mono text-xs rounded focus:outline-none focus:ring-1 focus:ring-archive-700" rows="15"></textarea>
+                            <div class="flex justify-end space-x-2 mt-2">
+                                <button onclick="cancelDocumentEdit()" class="text-xs border border-archive-200 px-3 py-1.5 rounded hover:bg-archive-100 transition-colors">Cancel</button>
+                                <button onclick="saveDocumentEdit()" class="text-xs bg-archive-900 text-archive-50 px-3 py-1.5 rounded hover:bg-archive-800 font-semibold transition-colors">Save Changes</button>
+                            </div>
+                        </div>
+
+                        <!-- Rendered Text Content -->
+                        <div id="view-doc-body" class="markdown-body font-serif text-archive-900 leading-relaxed text-sm">
+                            Select a document to begin.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ANALYSIS TAB -->
+                <div id="pane-analysis" class="h-full overflow-y-auto p-8 hidden">
+                    <div id="analysis-empty" class="h-full flex flex-col items-center justify-center text-center p-8">
+                        <div class="w-16 h-16 rounded-full bg-archive-100 flex items-center justify-center text-archive-300 mb-4">
+                            <i class="fa-solid fa-shield-halved text-2xl"></i>
+                        </div>
+                        <h3 class="text-md font-serif font-bold text-archive-800">Requirements Coverage Review</h3>
+                        <p class="text-xs text-archive-700 max-w-sm mt-1">
+                            Connect your Gemini key to verify system completeness, find logical ambiguities, testable metrics, and structural integrity.
+                        </p>
+                    </div>
+
+                    <div id="analysis-content" class="hidden space-y-6">
+                        <div class="flex items-center justify-between border-b border-archive-200 pb-3">
+                            <div>
+                                <h3 class="text-lg font-serif font-bold">Automated Integrity Report</h3>
+                                <p class="text-xs text-archive-700 font-mono">Powered by Gemini 2.5 Flash</p>
+                            </div>
+                            <button 
+                                onclick="runRequirementsReview()" 
+                                class="bg-archive-900 text-archive-50 text-xs font-semibold py-1.5 px-3 rounded hover:bg-archive-800 flex items-center space-x-1.5 transition-colors"
+                            >
+                                <i class="fa-solid fa-arrows-rotate"></i>
+                                <span>Re-Evaluate</span>
+                            </button>
+                        </div>
+
+                        <div id="analysis-output" class="markdown-body text-sm text-archive-900">
+                            <!-- Gemini output goes here -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ARCHITECTURE GENERATOR (MERMAID) -->
+                <div id="pane-mermaid" class="h-full overflow-y-auto p-8 hidden flex flex-col">
+                    <div id="mermaid-empty" class="h-full flex flex-col items-center justify-center text-center p-8">
+                        <div class="w-16 h-16 rounded-full bg-archive-100 flex items-center justify-center text-archive-300 mb-4">
+                            <i class="fa-solid fa-diagram-project text-2xl"></i>
+                        </div>
+                        <h3 class="text-md font-serif font-bold text-archive-800">Dynamic Architecture Diagramming</h3>
+                        <p class="text-xs text-archive-700 max-w-sm mt-1">
+                            Harnesses Gemini to digest written specifications and generate interactive UML Flowcharts, Use Case networks, and class hierarchies.
+                        </p>
+                    </div>
+
+                    <div id="mermaid-content" class="hidden flex-1 flex flex-col space-y-4 h-full">
+                        <div class="flex items-center justify-between border-b border-archive-200 pb-3">
+                            <div>
+                                <h3 class="text-lg font-serif font-bold">Generated UML System Flow</h3>
+                                <p class="text-xs text-archive-700 font-mono">Live architectural view modeled from SRS data</p>
+                            </div>
+                            <div class="flex space-x-2">
+                                <button 
+                                    onclick="generateSystemArchitecture('flowchart')" 
+                                    class="border border-archive-300 hover:border-archive-900 text-archive-800 text-xs py-1 px-2.5 rounded transition-colors"
+                                >
+                                    UML Flow
+                                </button>
+                                <button 
+                                    onclick="generateSystemArchitecture('sequence')" 
+                                    class="border border-archive-300 hover:border-archive-900 text-archive-800 text-xs py-1 px-2.5 rounded transition-colors"
+                                >
+                                    Sequence Diagram
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Rendered Mermaid Canvas Box -->
+                        <div class="flex-1 bg-archive-100 border border-archive-200 rounded p-4 flex items-center justify-center overflow-auto min-h-[300px]">
+                            <div id="mermaid-rendering-canvas" class="w-full text-center"></div>
+                        </div>
+
+                        <!-- Raw diagram editing interface -->
+                        <div class="border border-archive-200 rounded p-3 bg-archive-50">
+                            <details class="text-xs">
+                                <summary class="cursor-pointer font-mono font-semibold text-archive-700">View/Edit Raw Mermaid Code</summary>
+                                <textarea id="mermaid-raw-editor" class="w-full h-32 mt-2 p-2 bg-archive-900 text-archive-50 rounded font-mono text-[11px] focus:outline-none"></textarea>
+                                <button onclick="manualRenderMermaid()" class="mt-2 bg-archive-900 text-archive-50 font-semibold px-2.5 py-1 rounded hover:bg-archive-800">Update Rendering</button>
+                            </details>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- GENERATE SLIDES TAB -->
+                <div id="pane-slides" class="h-full overflow-y-auto p-8 hidden flex flex-col">
+                    <div id="slides-empty" class="h-full flex flex-col items-center justify-center text-center p-8">
+                        <div class="w-16 h-16 rounded-full bg-archive-100 flex items-center justify-center text-archive-300 mb-4">
+                            <i class="fa-solid fa-display text-2xl"></i>
+                        </div>
+                        <h3 class="text-md font-serif font-bold text-archive-800">Presentation Deck Generator</h3>
+                        <p class="text-xs text-archive-700 max-w-sm mt-1">
+                            Uses Gemini to turn the active SRS into a structured slide deck you can click through, present, or export as raw markdown.
+                        </p>
+                        <button 
+                            onclick="generateSlideDeck()" 
+                            class="mt-4 bg-archive-900 text-archive-50 px-4 py-2 text-xs rounded hover:bg-archive-800 font-medium transition-colors flex items-center space-x-2"
+                        >
+                            <i class="fa-solid fa-wand-magic-sparkles"></i>
+                            <span>Generate Slides</span>
+                        </button>
+                    </div>
+
+                    <div id="slides-content" class="hidden flex-1 flex flex-col space-y-4 h-full">
+                        <div class="flex items-center justify-between border-b border-archive-200 pb-3 shrink-0">
+                            <div>
+                                <h3 class="text-lg font-serif font-bold">Generated Presentation Deck</h3>
+                                <p class="text-xs text-archive-700 font-mono">Slide outline synthesized from active SRS document</p>
+                            </div>
+                            <button 
+                                onclick="generateSlideDeck()" 
+                                class="bg-archive-900 text-archive-50 text-xs font-semibold py-1.5 px-3 rounded hover:bg-archive-800 flex items-center space-x-1.5 transition-colors"
+                            >
+                                <i class="fa-solid fa-arrows-rotate"></i>
+                                <span>Re-Generate</span>
+                            </button>
+                        </div>
+
+                        <!-- Slide Viewer Stage -->
+                        <div class="flex-1 bg-archive-900 border border-archive-200 rounded-lg flex items-center justify-center overflow-hidden relative min-h-[320px]">
+                            <div id="slide-stage" class="w-full h-full flex flex-col items-start justify-center p-10 text-archive-50 overflow-y-auto">
+                                <!-- Active slide content injected here -->
+                            </div>
+                        </div>
+
+                        <!-- Slide Navigation Controls -->
+                        <div class="flex items-center justify-between shrink-0">
+                            <button 
+                                onclick="goToSlide(currentSlideIndex - 1)" 
+                                class="text-xs border border-archive-300 hover:border-archive-900 text-archive-800 px-3 py-1.5 rounded flex items-center space-x-1.5 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                                id="slide-prev-btn"
+                            >
+                                <i class="fa-solid fa-chevron-left"></i>
+                                <span>Previous</span>
+                            </button>
+
+                            <span id="slide-counter" class="text-xs font-mono text-archive-700">Slide 1 / 1</span>
+
+                            <button 
+                                onclick="goToSlide(currentSlideIndex + 1)" 
+                                class="text-xs border border-archive-300 hover:border-archive-900 text-archive-800 px-3 py-1.5 rounded flex items-center space-x-1.5 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                                id="slide-next-btn"
+                            >
+                                <span>Next</span>
+                                <i class="fa-solid fa-chevron-right"></i>
+                            </button>
+                        </div>
+
+                        <!-- Raw markdown editing interface, mirrors Mermaid's raw editor pattern -->
+                        <div class="border border-archive-200 rounded p-3 bg-archive-50 shrink-0">
+                            <details class="text-xs">
+                                <summary class="cursor-pointer font-mono font-semibold text-archive-700">View/Edit Raw Slide Markdown</summary>
+                                <textarea id="slides-raw-editor" class="w-full h-40 mt-2 p-2 bg-archive-900 text-archive-50 rounded font-mono text-[11px] focus:outline-none" placeholder="# Slide Title&#10;Bullet point one&#10;Bullet point two&#10;&#10;---&#10;&#10;# Next Slide Title&#10;..."></textarea>
+                                <button onclick="manualRenderSlides()" class="mt-2 bg-archive-900 text-archive-50 font-semibold px-2.5 py-1 rounded hover:bg-archive-800">Update Deck</button>
+                            </details>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- RIGHT SIDEBAR: Scholar Chatbot Assistant (30%) -->
+        <section class="w-1.5/4 bg-archive-100 flex flex-col overflow-hidden">
+            
+            <!-- Chat Head -->
+            <div class="h-11 border-b border-archive-200 bg-white flex items-center justify-between px-4 shrink-0">
+                <div class="flex items-center space-x-2">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <span class="text-xs font-mono font-bold tracking-wider uppercase text-archive-800">Requirements Analyst</span>
+                </div>
+                <button 
+                    onclick="clearChatHistory()" 
+                    class="text-[10px] text-archive-700 hover:text-red-700 transition-colors flex items-center space-x-1"
+                    title="Clear current notebook interaction thread"
+                >
+                    <i class="fa-solid fa-trash-can"></i>
+                    <span>Clear Chat</span>
+                </button>
+            </div>
+
+            <!-- Chat Message Thread Pane -->
+            <div id="chat-messages-box" class="flex-1 overflow-y-auto p-4 space-y-4">
+                <!-- Welcome Assistant Card -->
+                <div class="bg-white border border-archive-200 p-4 rounded-lg shadow-sm">
+                    <div class="flex items-center space-x-2 mb-2">
+                        <div class="w-6 h-6 rounded-full bg-archive-900 text-archive-50 flex items-center justify-center font-serif text-[10px] font-bold">AI</div>
+                        <h4 class="text-xs font-bold">SRS Assistant</h4>
+                    </div>
+                    <p class="text-xs text-archive-800 leading-relaxed">
+                        Welcome to your SRS Specification Space. I can help you analyze, verify, write, and trace software requirements.
+                    </p>
+                    <p class="text-xs text-archive-700 mt-2">
+                        Connect your **Gemini 2.5 Flash** key above. Once active, try testing these analytical actions:
+                    </p>
+                    
+                    <!-- Quick Prompt Suggesters -->
+                    <div class="mt-3 grid grid-cols-1 gap-1.5">
+                        <button onclick="applySuggestedPrompt('Find logical contradictions or ambiguities in this SRS.')" class="text-left text-[11px] bg-archive-50 hover:bg-archive-200 text-archive-800 px-2.5 py-1.5 rounded border border-archive-200 transition-colors">
+                            🔍 Inspect for logical contradictions
+                        </button>
+                        <button onclick="applySuggestedPrompt('Generate 10 concrete, automated test cases from Section 3 functional requirements.')" class="text-left text-[11px] bg-archive-50 hover:bg-archive-200 text-archive-800 px-2.5 py-1.5 rounded border border-archive-200 transition-colors">
+                            🧪 Extract automated verification tests
+                        </button>
+                        <button onclick="applySuggestedPrompt('Create a comprehensive traceability matrix matching System Goals to Functional Requirements.')" class="text-left text-[11px] bg-archive-50 hover:bg-archive-200 text-archive-800 px-2.5 py-1.5 rounded border border-archive-200 transition-colors">
+                            📋 Build requirement traceability matrix
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Dynamic Chat Content -->
+            </div>
+
+            <!-- Chat Active Loading Banner -->
+            <div id="chat-loading-banner" class="hidden px-4 py-2 bg-archive-200 border-y border-archive-300 text-[11px] text-archive-800 font-mono flex items-center space-x-2">
+                <i class="fa-solid fa-spinner animate-spin"></i>
+                <span>Gemini 2.5 Flash is compiling response...</span>
+            </div>
+
+            <!-- Chat Input Controls Box -->
+            <div class="p-3 bg-white border-t border-archive-200">
+                <div class="flex items-stretch space-x-2">
+                    <textarea 
+                        id="chat-input-area" 
+                        rows="2" 
+                        placeholder="Discuss requirements, run completeness audits, or prompt changes..." 
+                        class="flex-1 text-xs p-2.5 border border-archive-200 rounded resize-none focus:outline-none focus:border-archive-800 font-sans"
+                        onkeydown="handleChatSubmit(event)"
+                    ></textarea>
+                    
+                    <button 
+                        onclick="sendChatMessage()" 
+                        class="bg-archive-900 hover:bg-archive-800 text-archive-50 px-4 rounded flex flex-col items-center justify-center transition-all shadow-sm"
+                        title="Send query"
+                    >
+                        <i class="fa-solid fa-paper-plane text-xs mb-1"></i>
+                        <span class="text-[9px] uppercase font-mono tracking-wider font-bold">Ask</span>
+                    </button>
+                </div>
+                <div class="mt-1.5 flex justify-between items-center text-[10px] text-archive-700 px-1">
+                    <span>Press Enter to send</span>
+                    <span id="rag-indicator" class="font-mono bg-archive-100 px-1.5 py-0.5 rounded border border-archive-200">Context: Current SRS active</span>
+                </div>
+            </div>
+
+        </section>
+    </main>
+
+    <!-- FLOATING TOASTS / POPUPS -->
+    <div id="toast" class="fixed bottom-4 left-4 bg-archive-900 text-archive-50 border border-archive-700 text-xs py-2.5 px-4 rounded-lg shadow-lg max-w-sm hidden z-50 flex items-center space-x-2 transition-all">
+        <i class="fa-solid fa-info-circle text-amber-400"></i>
+        <span id="toast-text">Message</span>
+    </div>
+
+    <!-- PRE-LOADED DATA OBJECTS (The archetypal specification patterns) -->
+    <script>
+        const sampleDocuments = [
+            {
+                id: "srs-smart-hub",
+                title: "SRS: Smart Home Ecosystem Core",
+                meta: "Standard IEEE-830 Specification Format",
+                content: `## 1. Introduction
+This Software Requirements Specification (SRS) covers the Software Core of the Smart Home Automation Ecosystem (SHAE). The system coordinates connected appliances, implements automated scripts, and provides high-performance secure edge compute services.
+
+### 1.1 Document Purpose
+This specification governs developer milestones, QA suites, and regulatory evaluation. 
+
+### 1.2 System Scope
+SHAE delivers real-time home device integration (thermostats, cameras, locks, smart meters) operating over Zigbee, Thread, and Local Area WiFi. It uses local-first state handling to maintain processing integrity even during wide-area network drops.
+
+---
+
+## 2. Overall Description
+
+### 2.1 Product Perspective
+SHAE works as a localized router component interfacing with external mobile applications. Cloud relays exist strictly for remote diagnostic delivery and over-the-air updates.
+
+### 2.2 System Functions
+* **DF-1 (Device Auto-Discovery):** Automatically queries, negotiates, and lists Thread-enabled appliances.
+* **DF-2 (Real-Time Control Engine):** Executes low-latency state changes.
+* **DF-3 (Incident Logging):** Implements local storage mapping for performance analytics.
+
+---
+
+## 3. Specific Requirements
+
+### 3.1 External Interface Requirements
+#### 3.1.1 User Interfaces
+Mobile access must comply with ISO-9241 layout rules. Latency must remain below 150ms for local UI dashboard refreshes.
+
+#### 3.1.2 Hardware Interfaces
+The local physical unit will display an external e-ink interface detailing controller health metrics.
+
+---
+
+### 3.2 Functional Requirements
+
+#### 3.2.1 Core Orchestration Engine
+* **REQ-CORE-001 (Microsecond State Monitoring):** The core process shall poll connected home units every 50ms.
+* **REQ-CORE-002 (Fail-Safe Protocol):** If a secure smart lock fails to return an encrypted handshake in three consecutive cycles (150ms total), the system shall trigger a localized security warning dispatch.
+* **REQ-CORE-003 (Autonomous Operation):** In the event of wide-area Internet link failure, local home automation schedules shall operate within +/- 2.5 seconds of astronomical schedule offsets using local RTC systems.
+
+#### 3.2.2 Security Core
+* **REQ-SEC-001 (End-to-End Encryption):** All local transport socket linkages shall require TLS 1.3 encryption with AES-256-GCM configurations.
+* **REQ-SEC-002 (Key Management):** Security key generation shall cycle every 24 hours. Keys must be handled strictly inside localized Secure Elements.`
+            },
+            {
+                id: "srs-drone-delivery",
+                title: "SRS: Drone Delivery Routing Core",
+                meta: "Critical Aerospace Dispatch Specification v3.1",
+                content: `## 1. Scope
+This document outlines the routing specification for automated, long-range transport drones serving autonomous medical delivery grids.
+
+---
+
+## 2. Operational Constraints
+Drones must interface with regional flight management grids (U-Space/UTM). The autopilot must support automated emergency vertical landing under high wind velocities.
+
+---
+
+## 3. Functional Requirements
+
+### 3.1 Flight Planning & Pathfinding
+* **REQ-NAV-001 (Dynamic Route Resolution):** The routing scheduler shall resolve navigation paths with a minimum safe horizontal clearance of 50 meters from static topographical hazards.
+* **REQ-NAV-002 (Wind Drift Adjustment):** Autopilot routines shall update course parameters every 10 milliseconds during flight if sustained side-winds exceed 25 knots.
+* **REQ-NAV-003 (No-Fly Zone Safety Guard):** If coordinates of a dynamic civil restrictions airspace map are updated in-flight, the route solver shall recompute an alternative corridor within 800 milliseconds.
+
+### 3.2 Emergency Protocols
+* **REQ-SAFE-001 (Parachute Deployment):** If dual propulsion telemetry fails concurrently, the core micro-controller shall actuate mechanical emergency parachutes within 50ms of anomaly detection.
+* **REQ-SAFE-002 (Loss of Control Handshake):** If radio link drops for over 15 seconds, the drone shall transition immediately to autonomous hover state, descending at exactly 1.2 m/s.`
+            }
+        ];
+    </script>
+
+    <!-- CORE JS LOGIC & WEB SERVICES -->
+    <script>
+        // State Management
+        let appState = {
+            apiKey: "",
+            isKeyConnected: false,
+            documents: [],
+            activeDocId: null,
+            chatHistory: [],
+            activeTab: 'read', // 'read' | 'analysis' | 'mermaid' | 'slides'
+            currentAnalysis: "",
+            mermaidDiagram: "",
+            isEditing: false
+        };
+
+        // Slide Deck State (kept separate/simple, mirrors how mermaid raw code is tracked)
+        let currentSlides = [];      // array of { title, bullets: [] }
+        let currentSlideIndex = 0;
+        let currentSlidesRawMarkdown = "";
+
+        // DOM Elements
+        const apiKeyInput = document.getElementById('api-key-input');
+        const connectBtn = document.getElementById('connect-btn');
+        const connectIndicator = document.getElementById('connect-indicator');
+        const connectText = document.getElementById('connect-text');
+        const sourcesContainer = document.getElementById('sources-container');
+        const activeDocBadge = document.getElementById('active-doc-badge');
+        const docViewerEmpty = document.getElementById('document-viewer-empty');
+        const docViewerContent = document.getElementById('document-viewer-content');
+        const viewDocTitle = document.getElementById('view-doc-title');
+        const viewDocMeta = document.getElementById('view-doc-meta');
+        const viewDocBody = document.getElementById('view-doc-body');
+        const chatMessagesBox = document.getElementById('chat-messages-box');
+        const chatInputArea = document.getElementById('chat-input-area');
+        const chatLoadingBanner = document.getElementById('chat-loading-banner');
+        const dropZone = document.getElementById('drop-zone');
+        const fileUploader = document.getElementById('file-uploader');
+        const sourceCount = document.getElementById('source-count');
+        const docEditContainer = document.getElementById('doc-edit-container');
+        const docEditTextarea = document.getElementById('doc-edit-textarea');
+
+        // Initial Initialization
+        window.addEventListener('DOMContentLoaded', () => {
+            // Check for saved API key
+            const savedKey = localStorage.getItem('srs_llm_api_key');
+            if (savedKey) {
+                apiKeyInput.value = savedKey;
+                appState.apiKey = savedKey;
+                // Silently try connecting
+                autoConnectKey(savedKey);
+            }
+
+            // Load sample data by default to make the workspace look spectacular
+            loadSampleSRS();
+            
+            // Set up Drag and Drop mechanics
+            setupDragAndDrop();
+            
+            // Initialize Mermaid
+            mermaid.initialize({ startOnLoad: false, theme: 'neutral' });
+        });
+
+        // Toggle Password/API Key Visibility
+        function toggleApiKeyVisibility() {
+            const eyeIcon = document.getElementById('eye-icon');
+            if (apiKeyInput.type === "password") {
+                apiKeyInput.type = "text";
+                eyeIcon.className = "fa-solid fa-eye-slash";
+            } else {
+                apiKeyInput.type = "password";
+                eyeIcon.className = "fa-solid fa-eye";
+            }
+        }
+
+        // Show Temporary Alert (Custom Toast UI to bypass Alert inside iframes)
+        function showNotification(msg, isSuccess = true) {
+            const toast = document.getElementById('toast');
+            const toastText = document.getElementById('toast-text');
+            toastText.textContent = msg;
+            
+            const icon = toast.querySelector('i');
+            if (isSuccess) {
+                icon.className = "fa-solid fa-circle-check text-emerald-400 animate-bounce";
+            } else {
+                icon.className = "fa-solid fa-triangle-exclamation text-amber-400";
+            }
+
+            toast.classList.remove('hidden');
+            setTimeout(() => {
+                toast.classList.add('hidden');
+            }, 6000); // Expanded timing so detailed error messages can be read
+        }
+
+        // ==========================================
+        // API KEY HELPERS
+        // ==========================================
+        // Google AI Studio issues two valid key shapes for the Gemini API:
+        //   - "AIzaSy..." classic API keys
+        //   - "AQ...."    newer-style API keys (also shown in AI Studio's "API key details" panel)
+        // BOTH are sent the exact same way: as the `?key=` query parameter.
+        // There is no "Bearer token" path needed for normal AI Studio keys, so we
+        // always use the query-param style endpoint below. This was the source of
+        // the previous 401 errors (AQ... keys were being misrouted to an
+        // Authorization: Bearer header, which the API does not accept for them).
+        function buildGeminiEndpoint(key) {
+            return `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(key)}`;
+        }
+
+        // Connect API Key Function with Comprehensive Validation Feedback
+        async function connectApiKey() {
+            const key = apiKeyInput.value.trim();
+            if (!key) {
+                showNotification("Please enter an API key first.", false);
+                return;
+            }
+
+            connectText.textContent = "Connecting...";
+            connectIndicator.className = "w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse";
+
+            try {
+                // Perform quick handshake validation with Gemini 2.5 Flash
+                const isValid = await testGeminiHandshake(key);
+                if (isValid) {
+                    appState.apiKey = key;
+                    appState.isKeyConnected = true;
+                    localStorage.setItem('srs_llm_api_key', key);
+                    
+                    // UI Polish
+                    connectIndicator.className = "w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_8px_#10b981]";
+                    connectText.textContent = "Connected";
+                    showNotification("Successfully connected to Gemini 2.5 Flash!");
+                } else {
+                    throw new Error("Handshake returned unexpected verification data.");
+                }
+            } catch (error) {
+                connectIndicator.className = "w-2.5 h-2.5 rounded-full bg-red-500";
+                connectText.textContent = "Failed";
+                appState.isKeyConnected = false;
+                
+                console.error("API Handshake failed:", error);
+                showNotification(error.message, false);
+            }
+        }
+
+        async function autoConnectKey(key) {
+            try {
+                const isValid = await testGeminiHandshake(key);
+                if (isValid) {
+                    appState.apiKey = key;
+                    appState.isKeyConnected = true;
+                    connectIndicator.className = "w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_8px_#10b981]";
+                    connectText.textContent = "Connected";
+                }
+            } catch(e) {}
+        }
+
+        // Test API Key using a minor, ultra-low token request with enhanced structure checking
+        async function testGeminiHandshake(key) {
+            const endpoint = buildGeminiEndpoint(key);
+            const headers = { 'Content-Type': 'application/json' };
+
+            const payload = {
+                contents: [{ parts: [{ text: "Hello. Respond with exactly the word: ACTIVE" }] }]
+            };
+
+            try {
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: headers,
+                    body: JSON.stringify(payload)
+                });
+
+                if (response.status === 401) {
+                    throw new Error("HTTP 401 (Unauthorized): The key was rejected. Generate a fresh key at aistudio.google.com/apikey and make sure it's pasted in full with no extra spaces.");
+                }
+
+                if (response.status === 404) {
+                    throw new Error("HTTP 404: Endpoint not found. Ensure your model specification is correct and your custom key is registered.");
+                }
+
+                if (response.status === 400) {
+                    throw new Error("HTTP 400 (Bad Request): The key syntax or request payload is invalid. Please double-check.");
+                }
+
+                if (response.status === 403) {
+                    throw new Error("HTTP 403 (Forbidden): The key is blocked or unauthorized. Make sure the Gemini API is enabled in AI Studio/Google Cloud.");
+                }
+
+                if (!response.ok) {
+                    const errText = await response.text();
+                    throw new Error(`HTTP ${response.status}: Failed validation handshake. ${errText.substring(0, 100)}`);
+                }
+
+                const data = await response.json();
+                const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+                return text && text.trim().includes("ACTIVE");
+            } catch (e) {
+                if (e.message && e.message.includes("Failed to fetch")) {
+                    throw new Error("Network Error: Could not reach Google API. Ensure outbound requests are not blocked by browser CORS policies.");
+                }
+                throw e;
+            }
+        }
+
+        // Load Built-In Archetype Specs
+        function loadSampleSRS() {
+            sampleDocuments.forEach(doc => {
+                if (!appState.documents.some(d => d.id === doc.id)) {
+                    appState.documents.push({...doc});
+                }
+            });
+            renderDocumentsList();
+            // Automatically activate first sample doc
+            if (appState.documents.length > 0) {
+                activateDocument(appState.documents[0].id);
+            }
+            showNotification("Archetypal requirements templates active.");
+        }
+
+        // Render Sidebar List of Specs
+        function renderDocumentsList() {
+            sourcesContainer.innerHTML = '';
+            sourceCount.textContent = appState.documents.length;
+
+            appState.documents.forEach(doc => {
+                const isActive = doc.id === appState.activeDocId;
+                const card = document.createElement('div');
+                card.className = `p-3 rounded-lg border cursor-pointer transition-all ${
+                    isActive 
+                        ? 'bg-white border-archive-700 shadow-sm' 
+                        : 'bg-archive-50 border-archive-200 hover:border-archive-700 hover:bg-white'
+                }`;
+                card.onclick = () => activateDocument(doc.id);
+
+                card.innerHTML = `
+                    <div class="flex items-start justify-between">
+                        <div class="flex-1 min-w-0 pr-2">
+                            <h4 class="text-xs font-serif font-bold text-archive-900 truncate">${doc.title}</h4>
+                            <p class="text-[10px] text-archive-700 font-mono mt-0.5">${doc.meta}</p>
+                        </div>
+                        <button 
+                            onclick="event.stopPropagation(); deleteDocument('${doc.id}')" 
+                            class="text-archive-300 hover:text-red-700 text-[10px] p-0.5"
+                            title="Remove source file"
+                        >
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                    </div>
+                `;
+                sourcesContainer.appendChild(card);
+            });
+        }
+
+        // Activate Selected Specification
+        function activateDocument(docId) {
+            appState.activeDocId = docId;
+            appState.isEditing = false;
+            docEditContainer.classList.add('hidden');
+            viewDocBody.classList.remove('hidden');
+
+            const doc = appState.documents.find(d => d.id === docId);
+            if (doc) {
+                activeDocBadge.textContent = doc.title;
+                viewDocTitle.textContent = doc.title;
+                viewDocMeta.textContent = doc.meta;
+                
+                // Parse markdown in viewer
+                viewDocBody.innerHTML = marked.parse(doc.content);
+                
+                docViewerEmpty.classList.add('hidden');
+                docViewerContent.classList.remove('hidden');
+
+                // Toggle other panes back to empty or dynamic state
+                document.getElementById('analysis-empty').classList.remove('hidden');
+                document.getElementById('analysis-content').classList.add('hidden');
+                document.getElementById('mermaid-empty').classList.remove('hidden');
+                document.getElementById('mermaid-content').classList.add('hidden');
+                document.getElementById('slides-empty').classList.remove('hidden');
+                document.getElementById('slides-content').classList.add('hidden');
+                currentSlides = [];
+                currentSlideIndex = 0;
+
+                // Render tab contents if switching tab
+                if (appState.activeTab === 'analysis') {
+                    runRequirementsReview();
+                } else if (appState.activeTab === 'mermaid') {
+                    generateSystemArchitecture('flowchart');
+                }
+                // Slides tab intentionally not auto-triggered; see switchCenterTab.
+            } else {
+                activeDocBadge.textContent = "No document selected";
+                docViewerEmpty.classList.remove('hidden');
+                docViewerContent.classList.add('hidden');
+            }
+
+            renderDocumentsList();
+        }
+
+        // Delete Document from Registry
+        function deleteDocument(docId) {
+            appState.documents = appState.documents.filter(d => d.id !== docId);
+            if (appState.activeDocId === docId) {
+                appState.activeDocId = appState.documents.length > 0 ? appState.documents[0].id : null;
+            }
+            renderDocumentsList();
+            if (appState.activeDocId) {
+                activateDocument(appState.activeDocId);
+            } else {
+                activeDocBadge.textContent = "No document selected";
+                docViewerEmpty.classList.remove('hidden');
+                docViewerContent.classList.add('hidden');
+            }
+            showNotification("Document removed from workspace.");
+        }
+
+        // Edit Document Content
+        function editActiveDocument() {
+            const doc = appState.documents.find(d => d.id === appState.activeDocId);
+            if (!doc) return;
+
+            appState.isEditing = true;
+            docEditTextarea.value = doc.content;
+            docEditContainer.classList.remove('hidden');
+            viewDocBody.classList.add('hidden');
+        }
+
+        function cancelDocumentEdit() {
+            appState.isEditing = false;
+            docEditContainer.classList.add('hidden');
+            viewDocBody.classList.remove('hidden');
+        }
+
+        function saveDocumentEdit() {
+            const doc = appState.documents.find(d => d.id === appState.activeDocId);
+            if (!doc) return;
+
+            doc.content = docEditTextarea.value;
+            viewDocBody.innerHTML = marked.parse(doc.content);
+            appState.isEditing = false;
+            docEditContainer.classList.add('hidden');
+            viewDocBody.classList.remove('hidden');
+            showNotification("Document changes saved successfully!");
+        }
+
+        // Center Pane Tab Navigation
+        function switchCenterTab(tabName) {
+            appState.activeTab = tabName;
+            
+            // UI classes reset
+            const tabs = ['read', 'analysis', 'mermaid', 'slides'];
+            tabs.forEach(t => {
+                const btn = document.getElementById(`tab-${t}`);
+                if (t === tabName) {
+                    btn.className = "px-4 py-2 text-xs font-medium border-t-2 border-x border-archive-200 bg-white rounded-t-md -mb-[1px] text-archive-900 flex items-center space-x-1.5 transition-all";
+                } else {
+                    btn.className = "px-4 py-2 text-xs font-medium border-t-2 border-transparent hover:text-archive-900 text-archive-700 rounded-t-md -mb-[1px] flex items-center space-x-1.5 transition-all";
+                }
+            });
+
+            // Pane visibility toggle
+            document.getElementById('pane-read').classList.add('hidden');
+            document.getElementById('pane-analysis').classList.add('hidden');
+            document.getElementById('pane-mermaid').classList.add('hidden');
+            document.getElementById('pane-slides').classList.add('hidden');
+
+            document.getElementById(`pane-${tabName}`).classList.remove('hidden');
+
+            // Trigger action based on active tab selection
+            if (appState.activeDocId) {
+                if (tabName === 'analysis') {
+                    runRequirementsReview();
+                } else if (tabName === 'mermaid') {
+                    generateSystemArchitecture('flowchart');
+                }
+                // Note: 'slides' tab is intentionally NOT auto-triggered here.
+                // Slide generation is a larger request, so it only runs when the
+                // user explicitly clicks "Generate Slides" / "Re-Generate".
+            }
+        }
+
+        // Drag and Drop Handling for Files
+        function setupDragAndDrop() {
+            dropZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                dropZone.classList.add('border-archive-900');
+            });
+
+            dropZone.addEventListener('dragleave', () => {
+                dropZone.classList.remove('border-archive-900');
+            });
+
+            dropZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('border-archive-900');
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    handleUploadedFile(files[0]);
+                }
+            });
+
+            dropZone.addEventListener('click', () => {
+                fileUploader.click();
+            });
+
+            fileUploader.addEventListener('change', (e) => {
+                if (e.target.files.length > 0) {
+                    handleUploadedFile(e.target.files[0]);
+                }
+            });
+        }
+
+        // Handles parsed files (Text-based + PDF-based parses)
+        async function handleUploadedFile(file) {
+            const extension = file.name.split('.').pop().toLowerCase();
+            const documentTitle = file.name.replace(/\.[^/.]+$/, ""); // strip extension
+            
+            showNotification(`Parsing ${file.name}...`);
+
+            if (extension === 'pdf') {
+                try {
+                    const arrayBuffer = await file.arrayBuffer();
+                    const pdfText = await extractTextFromPDF(arrayBuffer);
+                    
+                    if (pdfText.trim().length === 0) {
+                        throw new Error("Could not extract any visible text from PDF. It might be scanned or empty.");
+                    }
+
+                    addNewDocument(documentTitle, "Parsed PDF Source Matrix", pdfText);
+                } catch (error) {
+                    console.error("PDF Parse error: ", error);
+                    showNotification("PDF Parsing failed. Try converting to TXT/Markdown or upload plain text files.", false);
+                }
+            } else if (['txt', 'md', 'json'].includes(extension)) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    let content = event.target.result;
+                    
+                    // Basic pretty-formatting if JSON structure
+                    if (extension === 'json') {
+                        try {
+                            const parsed = JSON.parse(content);
+                            content = `\`\`\`json\n${JSON.stringify(parsed, null, 2)}\n\`\`\``;
+                        } catch(e){}
+                    }
+                    addNewDocument(documentTitle, `Custom ${extension.toUpperCase()} Upload`, content);
+                };
+                reader.readAsText(file);
+            } else {
+                showNotification("Unsupported file format.", false);
+            }
+        }
+
+        // Extracts pure text from a PDF Buffer using PDF.js inside the client browser
+        async function extractTextFromPDF(arrayBuffer) {
+            const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+            let combinedText = '';
+            
+            for (let i = 1; i <= pdf.numPages; i++) {
+                const page = await pdf.getPage(i);
+                const textContent = await page.getTextContent();
+                const pageItems = textContent.items.map(item => item.str);
+                
+                // Construct structure
+                combinedText += `\n\n### PAGE ${i}\n` + pageItems.join(' ');
+            }
+            return combinedText;
+        }
+
+        function addNewDocument(title, meta, content) {
+            const newDoc = {
+                id: 'custom-' + Date.now(),
+                title: title,
+                meta: meta,
+                content: content
+            };
+            appState.documents.push(newDoc);
+            renderDocumentsList();
+            activateDocument(newDoc.id);
+            showNotification("Document added successfully.");
+        }
+
+
+        // ==========================================
+        // GEMINI API UTILITIES
+        // ==========================================
+
+        // Exponential backoff runner for API safety resilience
+        async function executeGeminiRequest(payload, retries = 5, delay = 1000) {
+            if (!appState.apiKey) {
+                showNotification("No Gemini API key connected. Check the top right section.", false);
+                throw new Error("Missing API Key");
+            }
+
+            const endpoint = buildGeminiEndpoint(appState.apiKey);
+            const headers = { 'Content-Type': 'application/json' };
+
+            for (let attempt = 1; attempt <= retries; attempt++) {
+                try {
+                    const response = await fetch(endpoint, {
+                        method: 'POST',
+                        headers: headers,
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (response.ok) {
+                        return await response.json();
+                    }
+
+                    if (response.status === 429 || response.status >= 500) {
+                        // Sleep and retry
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                        delay *= 2; // exponential backoff
+                    } else {
+                        const errBody = await response.text();
+                        throw new Error(`HTTP Error ${response.status}: ${errBody}`);
+                    }
+                } catch (error) {
+                    if (attempt === retries) {
+                        throw error;
+                    }
+                }
+            }
+        }
+
+        // Requirements Tab: Integrity Review Runner
+        async function runRequirementsReview() {
+            const doc = appState.documents.find(d => d.id === appState.activeDocId);
+            if (!doc) return;
+
+            document.getElementById('analysis-empty').classList.add('hidden');
+            const analysisContent = document.getElementById('analysis-content');
+            analysisContent.classList.remove('hidden');
+
+            const analysisOutput = document.getElementById('analysis-output');
+            analysisOutput.innerHTML = `
+                <div class="flex items-center space-x-2 py-4">
+                    <i class="fa-solid fa-circle-notch animate-spin text-archive-800"></i>
+                    <span class="text-xs font-mono text-archive-700">Analyzing Software Requirements Specification for potential architectural issues...</span>
+                </div>
+            `;
+
+            const systemPrompt = `You are a Principal Systems Engineer and Requirements Verification Specialist.
+Analyze the provided Software Requirements Specification (SRS) or document slice. Create a professional, scholarly, structured engineering review.
+Your analysis should cover:
+1. **Structural Quality**: Is it compliant with typical structures (e.g., IEEE 830)?
+2. **Ambiguity Finder**: Detail any ambiguous terminology (e.g., "fast latency", "robust", "should do as much as possible") and supply concrete, testable rewrites.
+3. **Completeness & Safety Audit**: Note what critical specs might be missing (e.g., security, disaster recovery protocols, database persistence metrics).
+4. **Validation Test Scenarios**: Draft 3 concrete test validation plans showing exact success outputs.
+
+Adopt a premium, helpful, formal tone. Render everything in markdown format.`;
+
+            const payload = {
+                contents: [
+                    { 
+                        parts: [
+                            { text: `Review this SRS Document:\n\nTITLE: ${doc.title}\n\nCONTENT:\n${doc.content}` }
+                        ] 
+                    }
+                ],
+                systemInstruction: {
+                    parts: [{ text: systemPrompt }]
+                }
+            };
+
+            try {
+                const data = await executeGeminiRequest(payload);
+                const generatedText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+                
+                if (generatedText) {
+                    analysisOutput.innerHTML = marked.parse(generatedText);
+                } else {
+                    analysisOutput.innerHTML = `<p class="text-xs text-red-600">Failed to generate validation report.</p>`;
+                }
+            } catch (error) {
+                console.error(error);
+                analysisOutput.innerHTML = `
+                    <div class="p-4 bg-red-50 border border-red-200 text-red-800 rounded text-xs space-y-2">
+                        <p class="font-bold">Execution Failed</p>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Mermaid.js Generator Tab
+        async function generateSystemArchitecture(diagramType = 'flowchart') {
+            const doc = appState.documents.find(d => d.id === appState.activeDocId);
+            if (!doc) return;
+
+            document.getElementById('mermaid-empty').classList.add('hidden');
+            const contentPane = document.getElementById('mermaid-content');
+            contentPane.classList.remove('hidden');
+
+            const canvas = document.getElementById('mermaid-rendering-canvas');
+            canvas.innerHTML = `
+                <div class="flex flex-col items-center justify-center p-8 space-y-2">
+                    <i class="fa-solid fa-spinner animate-spin text-xl text-archive-700"></i>
+                    <span class="text-xs font-mono text-archive-700">Synthesizing System Architecture UML Code...</span>
+                </div>
+            `;
+
+            let typePrompt = "Generate a Mermaid.js 'flowchart TD' representing system dataflows, hardware controllers, or software dependencies.";
+            if (diagramType === 'sequence') {
+                typePrompt = "Generate a Mermaid.js 'sequenceDiagram' showing authentication sequence, real-time message cycles, or critical service integrations described in the document.";
+            }
+
+            const systemPrompt = `You are an expert system designer. Analyze the provided SRS content and output ONLY a valid Mermaid.js block reflecting its architecture.
+Constraints:
+- You must ONLY return the raw Mermaid syntax. Do NOT write surrounding chat text, explanations, or backticks blocks.
+- Start directly with 'flowchart TD' or 'sequenceDiagram' depending on the user's specific request.
+- Ensure the syntax parses flawlessly. Do not use special characters or complex strings inside nodes unless quoted appropriately. For example, write: A["Step Description"] instead of A[Step Description].
+- Use simple, neat layout configurations.`;
+
+            const payload = {
+                contents: [
+                    { 
+                        parts: [
+                            { text: `${typePrompt}\n\nDOCUMENT SPECIFICATIONS:\n${doc.content}` }
+                        ] 
+                    }
+                ],
+                systemInstruction: {
+                    parts: [{ text: systemPrompt }]
+                }
+            };
+
+            try {
+                const data = await executeGeminiRequest(payload);
+                let text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+                
+                // Strip markdown styling codeblocks if returned
+                text = text.replace(/```mermaid/g, '').replace(/```/g, '').trim();
+                
+                document.getElementById('mermaid-raw-editor').value = text;
+                renderMermaidCode(text);
+            } catch (error) {
+                console.error(error);
+                canvas.innerHTML = `
+                    <div class="text-xs text-red-600 p-4 bg-red-50 border border-red-200 rounded">
+                        Failed to build dynamic Mermaid diagram: ${error.message}
+                    </div>
+                `;
+            }
+        }
+
+        // Renders visual chart from raw string input
+        async function renderMermaidCode(code) {
+            const canvas = document.getElementById('mermaid-rendering-canvas');
+            canvas.innerHTML = '<div class="text-xs font-mono animate-pulse text-archive-700">Compiling visual diagram...</div>';
+            
+            try {
+                // Generate clean unique element ID
+                const id = 'mermaid-svg-' + Math.floor(Math.random() * 100000);
+                
+                // Run mermaid render
+                const { svg } = await mermaid.render(id, code);
+                canvas.innerHTML = svg;
+            } catch (err) {
+                console.error("Mermaid parsing failure:", err);
+                canvas.innerHTML = `
+                    <div class="text-left text-xs bg-red-50 border border-red-100 p-4 rounded text-red-800 space-y-1.5">
+                        <p class="font-semibold"><i class="fa-solid fa-triangle-exclamation"></i> Visual Compilation Error</p>
+                        <p class="text-[11px] font-mono whitespace-pre-wrap">${err.message || err}</p>
+                        <p class="text-[10px] text-archive-700 pt-1">Try refreshing the diagram or tweaking raw statements below manually.</p>
+                    </div>
+                `;
+                // Clear out buggy element to prevent crash on next cycle
+                const badElement = document.getElementById(id);
+                if (badElement) badElement.remove();
+            }
+        }
+
+        function manualRenderMermaid() {
+            const rawCode = document.getElementById('mermaid-raw-editor').value;
+            renderMermaidCode(rawCode);
+        }
+
+        // ==========================================
+        // SLIDE DECK GENERATOR (Generate Slides tab)
+        // ==========================================
+
+        // Calls Gemini to turn the active SRS document into a structured slide deck.
+        // Asks for a simple, parseable markdown format: each slide is a "# Title"
+        // line followed by "- bullet" lines, slides separated by a "---" line.
+        // This keeps parsing simple/robust without needing the model to return JSON.
+        async function generateSlideDeck() {
+            const doc = appState.documents.find(d => d.id === appState.activeDocId);
+            if (!doc) {
+                showNotification("Load a specification document first.", false);
+                return;
+            }
+
+            document.getElementById('slides-empty').classList.add('hidden');
+            const slidesContent = document.getElementById('slides-content');
+            slidesContent.classList.remove('hidden');
+
+            const slideStage = document.getElementById('slide-stage');
+            slideStage.innerHTML = `
+                <div class="flex items-center space-x-2 text-archive-200">
+                    <i class="fa-solid fa-circle-notch animate-spin"></i>
+                    <span class="text-xs font-mono">Synthesizing presentation deck from SRS contents...</span>
+                </div>
+            `;
+            document.getElementById('slide-counter').textContent = "Slide — / —";
+
+            const systemPrompt = `You are a presentation designer creating a slide deck from a Software Requirements Specification (SRS).
+Output ONLY plain markdown in this EXACT format, nothing else (no commentary, no code fences):
+
+# Slide Title Here
+- First bullet point, concise
+- Second bullet point
+- Third bullet point (3-5 bullets per slide max)
+
+---
+
+# Next Slide Title
+- Bullet point
+- Bullet point
+
+Rules:
+- Separate every slide with a line containing exactly three dashes: ---
+- Each slide starts with a single "# " title line.
+- Follow the title with 3-5 short "- " bullet lines. Keep bullets concise (under ~15 words each), suitable for display on a presentation screen.
+- Produce 6 to 10 slides total covering: Title/Overview, Purpose & Scope, System Functions/Actors, Key Functional Requirements (split across 1-2 slides if many), Non-Functional/Safety/Security Requirements, Architecture Highlights, and a Closing/Summary slide.
+- Do not invent requirements not present in the source document. Base content strictly on the provided SRS.
+- Do not use markdown bold/italics/headers other than the single "# " title per slide.`;
+
+            const payload = {
+                contents: [
+                    {
+                        parts: [
+                            { text: `Create a presentation deck from this SRS document:\n\nTITLE: ${doc.title}\n\nCONTENT:\n${doc.content}` }
+                        ]
+                    }
+                ],
+                systemInstruction: {
+                    parts: [{ text: systemPrompt }]
+                }
+            };
+
+            try {
+                const data = await executeGeminiRequest(payload);
+                const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+
+                if (!text) {
+                    throw new Error("Gemini returned no slide content.");
+                }
+
+                // Strip stray code fences if the model added them despite instructions
+                const cleaned = text.replace(/```markdown/g, '').replace(/```/g, '').trim();
+
+                document.getElementById('slides-raw-editor').value = cleaned;
+                loadSlidesFromMarkdown(cleaned);
+            } catch (error) {
+                console.error(error);
+                slideStage.innerHTML = `
+                    <div class="text-left text-xs bg-red-50 border border-red-100 p-4 rounded text-red-800 space-y-1.5 max-w-md">
+                        <p class="font-semibold"><i class="fa-solid fa-triangle-exclamation"></i> Slide Generation Failed</p>
+                        <p class="text-[11px] font-mono whitespace-pre-wrap">${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Parses the simple "# Title / - bullets / ---" markdown format into slide objects
+        function parseSlideMarkdown(markdownText) {
+            const rawSlides = markdownText.split(/^\s*---\s*$/m).map(s => s.trim()).filter(s => s.length > 0);
+
+            return rawSlides.map(block => {
+                const lines = block.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+                let title = "Untitled Slide";
+                const bullets = [];
+
+                lines.forEach(line => {
+                    if (line.startsWith('# ')) {
+                        title = line.replace(/^#+\s*/, '');
+                    } else if (line.startsWith('- ') || line.startsWith('* ')) {
+                        bullets.push(line.replace(/^[-*]\s*/, ''));
+                    } else if (!title || title === "Untitled Slide") {
+                        // Fallback: treat first non-bullet line as title if no '#' was used
+                        title = line.replace(/^#+\s*/, '');
+                    } else {
+                        bullets.push(line);
+                    }
+                });
+
+                return { title, bullets };
+            });
+        }
+
+        // Loads raw markdown text into currentSlides state and renders the first slide
+        function loadSlidesFromMarkdown(markdownText) {
+            currentSlidesRawMarkdown = markdownText;
+            currentSlides = parseSlideMarkdown(markdownText);
+            currentSlideIndex = 0;
+
+            if (currentSlides.length === 0) {
+                document.getElementById('slide-stage').innerHTML = `
+                    <div class="text-xs text-archive-300 font-mono">No slides could be parsed from the generated content.</div>
+                `;
+                document.getElementById('slide-counter').textContent = "Slide 0 / 0";
+                return;
+            }
+
+            renderSlideAtIndex(currentSlideIndex);
+        }
+
+        // Renders a single slide's content into the stage, with simple fade-friendly markup
+        function renderSlideAtIndex(index) {
+            const stage = document.getElementById('slide-stage');
+            const counter = document.getElementById('slide-counter');
+            const prevBtn = document.getElementById('slide-prev-btn');
+            const nextBtn = document.getElementById('slide-next-btn');
+
+            if (currentSlides.length === 0) return;
+
+            // Clamp index defensively
+            index = Math.max(0, Math.min(index, currentSlides.length - 1));
+            currentSlideIndex = index;
+
+            const slide = currentSlides[index];
+            const bulletsHtml = slide.bullets.map(b => `
+                <li class="flex items-start space-x-2.5 mb-2.5">
+                    <span class="mt-1.5 w-1.5 h-1.5 rounded-full bg-archive-300 shrink-0"></span>
+                    <span class="text-sm leading-relaxed">${b}</span>
+                </li>
+            `).join('');
+
+            stage.innerHTML = `
+                <div class="w-full max-w-2xl mx-auto">
+                    <p class="text-[10px] font-mono uppercase tracking-widest text-archive-300 mb-2">Slide ${index + 1}</p>
+                    <h2 class="font-serif font-bold text-2xl md:text-3xl mb-6 text-archive-50">${slide.title}</h2>
+                    <ul class="list-none">${bulletsHtml}</ul>
+                </div>
+            `;
+
+            counter.textContent = `Slide ${index + 1} / ${currentSlides.length}`;
+            prevBtn.disabled = index === 0;
+            nextBtn.disabled = index === currentSlides.length - 1;
+        }
+
+        // Navigation handler for Previous/Next buttons
+        function goToSlide(index) {
+            if (currentSlides.length === 0) return;
+            if (index < 0 || index >= currentSlides.length) return;
+            renderSlideAtIndex(index);
+        }
+
+        // Re-parses and re-renders the deck from the raw markdown editor (manual edits)
+        function manualRenderSlides() {
+            const rawText = document.getElementById('slides-raw-editor').value;
+            if (!rawText || rawText.trim().length === 0) {
+                showNotification("Raw slide markdown is empty.", false);
+                return;
+            }
+            loadSlidesFromMarkdown(rawText);
+            showNotification("Slide deck updated from raw markdown.");
+        }
+
+        // Chat Interface Logic
+        function clearChatHistory() {
+            appState.chatHistory = [];
+            chatMessagesBox.innerHTML = `
+                <div class="bg-white border border-archive-200 p-4 rounded-lg shadow-sm">
+                    <div class="flex items-center space-x-2 mb-2">
+                        <div class="w-6 h-6 rounded-full bg-archive-900 text-archive-50 flex items-center justify-center font-serif text-[10px] font-bold">AI</div>
+                        <h4 class="text-xs font-bold">Notebook Companion</h4>
+                    </div>
+                    <p class="text-xs text-archive-800">
+                        Chat thread has been refreshed. What software elements should we analyze?
+                    </p>
+                </div>
+            `;
+            showNotification("Chat cleared.");
+        }
+
+        function applySuggestedPrompt(promptText) {
+            chatInputArea.value = promptText;
+            chatInputArea.focus();
+        }
+
+        function handleChatSubmit(event) {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                sendChatMessage();
+            }
+        }
+
+        // Dispatches messaging to Gemini Flash
+        async function sendChatMessage() {
+            const userText = chatInputArea.value.trim();
+            if (!userText) return;
+
+            // Clear input
+            chatInputArea.value = '';
+
+            // Render User bubble immediately
+            renderMessageBubble("user", userText);
+
+            // Document Context payload preparation
+            let docContext = "";
+            const activeDoc = appState.documents.find(d => d.id === appState.activeDocId);
+            if (activeDoc) {
+                docContext = `Current active specification:\n\nTITLE: ${activeDoc.title}\n\nCONTENT:\n${activeDoc.content}`;
+            } else {
+                docContext = "No document is currently active.";
+            }
+
+            // Track conversation state
+            appState.chatHistory.push({ role: "user", text: userText });
+
+            chatLoadingBanner.classList.remove('hidden');
+            chatMessagesBox.scrollTop = chatMessagesBox.scrollHeight;
+
+            const systemPrompt = `You are a Senior Systems Analyst and SRS Architect, helping developers analyze systems specifications.
+Reference the active document context provided below to answer user queries with precise technical arguments.
+If they ask to write new sections or requirements, use proper formal code indices (e.g. REQ-SYS-001) and precise constraints.
+Always display mathematical configurations or logical statements using LaTeX markup style. Enclose inline formulas in '$' and display formulas in '$$'.
+Do NOT make up facts. Keep the tone helpful, direct, and scholarly.`;
+
+            // Pack conversation payload
+            const contents = [];
+            
+            // Build the contextual history
+            contents.push({
+                parts: [
+                    { text: `DOCUMENT CONTEXT:\n${docContext}\n\nUSER QUESTION:\n${userText}` }
+                ]
+            });
+
+            const payload = {
+                contents: contents,
+                systemInstruction: {
+                    parts: [{ text: systemPrompt }]
+                }
+            };
+
+            try {
+                const responseData = await executeGeminiRequest(payload);
+                const assistantResponse = responseData.candidates?.[0]?.content?.parts?.[0]?.text;
+
+                chatLoadingBanner.classList.add('hidden');
+                
+                if (assistantResponse) {
+                    appState.chatHistory.push({ role: "model", text: assistantResponse });
+                    renderMessageBubble("model", assistantResponse);
+                } else {
+                    renderMessageBubble("model", "I encountered an error interpreting the context.");
+                }
+            } catch (error) {
+                console.error(error);
+                chatLoadingBanner.classList.add('hidden');
+                renderMessageBubble("model", `⚠️ Error executing model pipeline: ${error.message}`);
+            }
+
+            // Scroll to base
+            chatMessagesBox.scrollTop = chatMessagesBox.scrollHeight;
+        }
+
+        // Render message nodes to the screen
+        function renderMessageBubble(role, text) {
+            const bubble = document.createElement('div');
+            const isUser = role === 'user';
+            
+            bubble.className = isUser 
+                ? "flex flex-col items-end space-y-1 max-w-[85%] ml-auto" 
+                : "flex flex-col items-start space-y-1 max-w-[85%]";
+
+            const headerText = isUser ? "User Specifier" : "Requirements Assistant";
+            const iconClass = isUser ? "fa-solid fa-user-gear text-archive-800" : "fa-solid fa-brain text-archive-900";
+            const bgClass = isUser ? "bg-archive-900 text-archive-50 rounded-br-none" : "bg-white border border-archive-200 text-archive-900 rounded-bl-none shadow-sm";
+
+            bubble.innerHTML = `
+                <div class="flex items-center space-x-1.5 text-[10px] text-archive-700 font-mono">
+                    <i class="${iconClass}"></i>
+                    <span>${headerText}</span>
+                </div>
+                <div class="p-3.5 rounded-lg text-xs leading-relaxed markdown-body ${bgClass}">
+                    ${isUser ? text.replace(/\n/g, '<br>') : marked.parse(text)}
+                </div>
+            `;
+
+            chatMessagesBox.appendChild(bubble);
+            chatMessagesBox.scrollTop = chatMessagesBox.scrollHeight;
+        }
+
+        // Quick Summary Utility Button Function
+        async function triggerQuickSummary() {
+            const doc = appState.documents.find(d => d.id === appState.activeDocId);
+            if (!doc) {
+                showNotification("Load a specification document first.", false);
+                return;
+            }
+
+            // Route to analysis view tab & prompt
+            switchCenterTab('analysis');
+            
+            const analysisOutput = document.getElementById('analysis-output');
+            analysisOutput.innerHTML = `
+                <div class="flex items-center space-x-2 py-4">
+                    <i class="fa-solid fa-circle-notch animate-spin text-archive-800"></i>
+                    <span class="text-xs font-mono text-archive-700">Synthesizing comprehensive requirements summary...</span>
+                </div>
+            `;
+
+            const systemPrompt = `Analyze the provided requirements document. Write an advanced system brief in professional engineering terms.
+Include:
+1. **Core Value Proposition** (What does this system solve?)
+2. **Actor Profiles** (Who/what interacts with the system?)
+3. **Key Architectural Constraints** (Safety envelopes, response thresholds, limits)
+4. **Summary Checklist** (A brief tabular compliance summary)
+
+Use Markdown.`;
+
+            const payload = {
+                contents: [{ parts: [{ text: `Analyze the document:\n\n${doc.content}` }] }],
+                systemInstruction: { parts: [{ text: systemPrompt }] }
+            };
+
+            try {
+                const data = await executeGeminiRequest(payload);
+                const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+                if (text) {
+                    analysisOutput.innerHTML = marked.parse(text);
+                }
+            } catch (error) {
+                analysisOutput.innerHTML = `<p class="text-xs text-red-600">${error.message}</p>`;
+            }
+        }
+    </script>
+</body>
+</html>
